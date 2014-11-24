@@ -1,0 +1,10 @@
+applications:
+- services:
+  - mt-watson
+  - lang-watson
+  host: WatsonTranslator
+  name: WatsonTranslator
+  path: proptranslate.war
+  domain: mybluemix.net
+  instances: 1
+  memory: 512M
