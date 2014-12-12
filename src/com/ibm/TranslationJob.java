@@ -20,20 +20,31 @@ public class TranslationJob implements Runnable {
 	private AsyncContext ac;
 	private TranslationRequest request;
 	private HttpSession session;
+	private String fileType = null;
 	
-	public TranslationJob(AsyncContext context, HttpSession client, TranslationRequest translationRequest) throws InvalidTranslationRequest {
+	public TranslationJob(AsyncContext context, HttpSession client, TranslationRequest translationRequest, String format) throws InvalidTranslationRequest {
 		ac = context;
 		request = translationRequest;
 		session = client;	
+		fileType = format;
 	}
 	
 	public void startJob() {
 		PrintWriter writer = null;
 		
 		try {
-			// We create a property file while we process the strings so that 
-			// the file can be downloaded later
-			Properties properties = new Properties();
+			Object resources = null;
+			
+			if(fileType.equalsIgnoreCase("properties")) {
+				// We create a property file while we process the strings so that 
+				// the file can be downloaded later
+				resources = new Properties();
+			}
+			else if(fileType.equalsIgnoreCase("json")) {
+				// We create a JSON file while we process the strings so that 
+				// the file can be downloaded later
+				resources = new JSONObject();
+			}
 			
 			writer = ac.getResponse().getWriter();
 			String targetLang = request.getTargetLanguage();
@@ -63,8 +74,13 @@ public class TranslationJob implements Runnable {
 				writer.write("data: " + json.toString() + "\n\n");
     			writer.flush();
     			
-    			// Add the translated string to the property file
-    			properties.setProperty(element.getKey(), translatedString);
+    			if(fileType.equalsIgnoreCase("properties")) {
+    				// Add the translated string to the property file
+    				((Properties) resources).setProperty(element.getKey(), translatedString);
+    			}
+    			else if(fileType.equalsIgnoreCase("json")) {
+    				((JSONObject) resources).put(element.getKey(), translatedString);
+    			}
     			++id;
 			}
 			
@@ -76,7 +92,7 @@ public class TranslationJob implements Runnable {
         	writer.close();
         	
         	// save the properties in the session for future download
-        	session.setAttribute("properties", properties);
+        	session.setAttribute("resources", resources);
         	ac.complete();
 		}
 		

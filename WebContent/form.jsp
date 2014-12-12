@@ -56,9 +56,9 @@ ResourceBundle res = ResourceBundle.getBundle("com.ibm.translation",
         <div class="container-fluid">
             <form id="translateForm" method="post" class="form-horizontal" action="TranslationServlet" enctype="multipart/form-data" role="form">
             <div class="form-group">
-        		<label for="file"><%=res.getString("java")%></label>
+        		<label for="file"><%=res.getString("file")%></label>
         		<input type="file" name="file"/>
-        		<p class="help-block"><%=res.getString("java_help")%></p>
+        		<p class="help-block"><%=res.getString("file_help")%></p>
         	</div>
         	<div class="form-group">
         		<label for="source_language" class="control-label"><%=res.getString("source_language")%></label> 
@@ -136,7 +136,7 @@ ResourceBundle res = ResourceBundle.getBundle("com.ibm.translation",
 	
 	// This gets called if there is a problem with uploading the file
 	function showError(response, status, err) {
-		alert('<%=res.getString("java_error")%>');
+		alert('<%=res.getString("file_error")%>');
 	}
 	
 	function setupEventSource() {
