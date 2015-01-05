@@ -34,7 +34,7 @@ import com.ibm.json.java.JSONObject;
 public class TranslationServlet extends HttpServlet {
 	private static final long serialVersionUID = 1L;
 	private static Logger logger = Logger.getLogger(TranslationServlet.class.getName());
-       
+
     /**
      * @see HttpServlet#HttpServlet()
      */
@@ -42,7 +42,7 @@ public class TranslationServlet extends HttpServlet {
         super();
         // TODO Auto-generated constructor stub
     }
-    
+
     // This gets the filename from the uploaded file
     private String getFileName(Part part) {
         for (String header : part.getHeader("content-disposition").split(";")) {
@@ -53,7 +53,7 @@ public class TranslationServlet extends HttpServlet {
         }
         return null;
     }
-    
+
 
 	/**
 	 * @see HttpServlet#doGet(HttpServletRequest request, HttpServletResponse response)
@@ -62,44 +62,44 @@ public class TranslationServlet extends HttpServlet {
 		HttpSession session = request.getSession(false);
 		String download = request.getParameter("download");
 		String translate = request.getParameter("translate");
-		
+
     	// Request to download property file
     	if(download != null && download.equals("true")) {
     		Object resources = session.getAttribute("resources");
     		String fileType = (String) session.getAttribute("fileType");
-    		
+
     		String fileName = (String) session.getAttribute("resourceFilename");
-    		
+
     		if(resources != null && fileName != null) {
     			response.setContentType("application/octet-stream");
     			response.setHeader("Content-Disposition", "attachment; filename=\"" + fileName + "\"");
-    			
+
     			if(fileType.equalsIgnoreCase("properties")) {
     				((Properties) resources).store(response.getOutputStream(), "Created by IBM Watson Machine Translation");
     			}
     			else if(fileType.equalsIgnoreCase("json")) {
     				((JSONObject) resources).serialize(response.getOutputStream(), true);
     			}
-    			
+
     			response.getOutputStream().flush();
     			response.getOutputStream().close();
     		}
     	}
-		
+
     	// Request to just generate the translation as server side events
     	else if (translate != null && translate.equals("true")){
-    		TranslationRequest translationRequest = (TranslationRequest) 
+    		TranslationRequest translationRequest = (TranslationRequest)
     				session.getAttribute("translationRequest");
-    		
+
     		if(translationRequest != null) {
     			response.setContentType("text/event-stream");
     			response.setCharacterEncoding("UTF-8");
-    			response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate"); 
+    			response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
     			response.setHeader("Pragma", "no-cache");
     			response.setDateHeader("Expires", 0);
-    			
+
     			AsyncContext ac = request.startAsync();
-		
+
     			// The translation job generates server side events as responses
     			try {
     				String fileType = (String) session.getAttribute("fileType");
@@ -124,50 +124,53 @@ public class TranslationServlet extends HttpServlet {
 		String targetLanguage = request.getParameter("target_language");
 		Part filePart = request.getPart("file");
 		boolean processed = false;
-		
+
 		PrintWriter pw = response.getWriter();
-		
+
 		TranslationRequest translationRequest = new TranslationRequest();
 		translationRequest.setSourceLanguage(sourceLanguage);
 		translationRequest.setTargetLanguage(targetLanguage);
-		
+
 		String fileName = getFileName(filePart);
         String baseName = FilenameUtils.getBaseName(fileName);
+				// filter out the use of the language code in the source file name
+				baseName = baseName.replace("-en", "");
+				baseName = baseName.replace("_en", "");
         String extension = FilenameUtils.getExtension(fileName);
         String name = null;
         String fileType = null;
-        
+
         ArrayList<Element> elements = new ArrayList<Element>();
-		
+
 		InputStream filecontent = filePart.getInputStream();
-        
+
         if(extension.equalsIgnoreCase("properties")) {
         	Properties properties = new Properties();
             properties.load(filecontent);
-        	
+
         	// Process all the keys in the Java property file
-            Enumeration<?> keys = properties.propertyNames();    
-            
+            Enumeration<?> keys = properties.propertyNames();
+
             while (keys.hasMoreElements()) {
             	String key = (String) keys.nextElement();
             	Element element = new Element(sourceLanguage,
-            				(String)key, 
+            				(String)key,
             				properties.getProperty((String)key));
             	elements.add(element);
             }
-            
+
             // save the name of the file that will be used for the properties file
             // Replace the use of "-" with "_" to have a correct property file name
-            name = baseName + "_" + 
+            name = baseName + "_" +
             		translationRequest.getTargetLanguage().replace('-', '_') + "." +
             		extension;
             fileType = "properties";
             processed = true;
         }
-        
+
         else if(extension.equalsIgnoreCase("json")) {
         	JSONObject json = JSONObject.parse(filecontent);
-        	
+
         	// Process all the keys in the JSON object
         	@SuppressWarnings("unchecked")
         	Set<String> keys = json.keySet();
@@ -177,24 +180,24 @@ public class TranslationServlet extends HttpServlet {
         				(String)json.get(key));
         		elements.add(element);
         	}
-        	
-        	 name = baseName + "-" + 
+
+        	 name = baseName + "-" +
              		translationRequest.getTargetLanguage() + "." +
              		extension;
         	 fileType = "json";
         	 processed = true;
         }
-        
-        
+
+
         if(processed) {
-        	translationRequest.setSourceElements(elements);	
+        	translationRequest.setSourceElements(elements);
         	session.setAttribute("resourceFilename", name);
         	session.setAttribute("fileType", fileType);
-        	
-        	// save the translationRequest so that the request gets processed 
+
+        	// save the translationRequest so that the request gets processed
             // when the GET call is made
             session.setAttribute("translationRequest", translationRequest);
-            
+
             // return the session id to the caller in a JSON object
             JSONObject json = new JSONObject();
             json.put("session", session.getId());
@@ -202,7 +205,7 @@ public class TranslationServlet extends HttpServlet {
             pw.flush();
             pw.close();
         }
-        
+
 	}
 
 }
